@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Practical Quiz3: Solar System</title>
+  <script src="script/aframe.min.js"></script>
+
+  <style>
+    body { margin: 0; overflow: hidden; }
+
+    /* HUD Info Panel */
+    #info-panel {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(5, 10, 30, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(100, 160, 255, 0.3);
+      border-radius: 16px;
+      padding: 16px 28px;
+      color: #c8daf8;
+      font-family: 'Segoe UI', 'Roboto', sans-serif;
+      font-size: 14px;
+      text-align: center;
+      z-index: 1000;
+      pointer-events: none;
+      box-shadow: 0 0 30px rgba(60, 120, 255, 0.15);
+      max-width: 460px;
+    }
+    #info-panel h2 {
+      margin: 0 0 4px 0;
+      font-size: 20px;
+      color: #fff;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    #info-panel p { margin: 0; opacity: 0.8; }
+    #info-panel.hidden { display: none; }
+
+    /* Title overlay */
+    #title-overlay {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Segoe UI', 'Roboto', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #fff;
+      text-shadow: 0 0 20px rgba(100, 180, 255, 0.6);
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    /* Controls hint */
+    #controls-hint {
+      position: fixed;
+      top: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Segoe UI', 'Roboto', sans-serif;
+      font-size: 12px;
+      color: rgba(200, 220, 255, 0.5);
+      z-index: 1000;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- HUD -->
+  <div id="controls-hint">Click & drag to look around &middot; Scroll to zoom &middot; Click a planet for info</div>
+  <div id="info-panel" class="hidden">
+    <h2 id="planet-name"></h2>
+    <p id="planet-desc"></p>
+  </div>
+
+  <a-scene
+    vr-mode-ui="enabled: false"
+    loading-screen="dotsColor: #3af; backgroundColor: #020818"
+    renderer="antialias: true; colorManagement: true"
+    cursor="rayOrigin: mouse; fuse: false"
+    raycaster="objects: .clickable"
+  >
+    <!-- ========== ASSETS ========== -->
+    <a-assets timeout="30000">
+      <img id="tex-stars"     src="texture/2k_stars_milky_way.jpg">
+      <img id="tex-sun"       src="texture/2k_sun.jpg">
+      <img id="tex-mercury"   src="texture/2k_mercury.jpg">
+      <img id="tex-venus"     src="texture/2k_venus_atmosphere.jpg">
+      <img id="tex-earth"     src="texture/2k_earth_daymap.jpg">
+      <img id="tex-moon"      src="texture/2k_moon.jpg">
+      <img id="tex-mars"      src="texture/2k_mars.jpg">
+      <img id="tex-jupiter"   src="texture/2k_jupiter.jpg">
+      <img id="tex-saturn"    src="texture/2k_saturn.jpg">
+      <img id="tex-saturn-ring" src="texture/2k_saturn_ring_alpha.png">
+      <img id="tex-uranus"    src="texture/2k_uranus.jpg">
+      <img id="tex-neptune"   src="texture/2k_neptune.jpg">
+    </a-assets>
+
+    <!-- ========== SKY ========== -->
+    <a-sky src="#tex-stars" radius="500"></a-sky>
+
+    <!-- ========== CAMERA ========== -->
+    <a-entity id="camera-rig" position="0 12 35">
+      <a-camera
+        look-controls="reverseMouseDrag: false"
+        wasd-controls="acceleration: 30"
+        fov="60"
+        near="0.1"
+        far="1000"
+      ></a-camera>
+    </a-entity>
+
+    <!-- ========== AMBIENT LIGHTING ========== -->
+    <a-entity light="type: ambient; color: #334; intensity: 0.35"></a-entity>
+
+    <!-- ========== SUN ========== -->
+    <a-entity id="sun-group" position="0 0 0">
+      <!-- Sun sphere (self-illuminating) -->
+      <a-sphere
+        class="clickable"
+        radius="4"
+        material="src: #tex-sun; shader: flat"
+        planet-info="name: Sun; desc: A yellow dwarf star · Contains 99.8% of the Solar System\'s mass · Core temperature ~15M °C"
+        animation="property: rotation; to: 0 360 0; dur: 60000; easing: linear; loop: true"
+      >
+      </a-sphere>
+
+      <!-- Sun point light -->
+      <a-entity light="type: point; color: #FFEEDD; intensity: 1.8; distance: 300; decay: 1.2"></a-entity>
+
+      <!-- Sun glow (larger transparent sphere) -->
+      <a-sphere
+        radius="4.6"
+        material="color: #FF6600; opacity: 0.08; transparent: true; shader: flat; side: double"
+      ></a-sphere>
+    </a-entity>
+
+    <!-- ===================================================== -->
+    <!--                       PLANETS                         -->
+    <!-- ===================================================== -->
+
+    <!-- ~~~~~ MERCURY ~~~~~ -->
+    <a-entity id="mercury-orbit" rotation="0 0 0" animation="property: rotation; to: 0 360 0; dur: 8000; easing: linear; loop: true">
+      <a-sphere
+        class="clickable"
+        position="7 0 0"
+        radius="0.4"
+        material="src: #tex-mercury; shader: standard; roughness: 0.9"
+        planet-info="name: Mercury; desc: Fastest orbiting planet · Extreme temperature variations · Heavily cratered surface"
+        animation="property: rotation; to: 0 360 0; dur: 5000; easing: linear; loop: true"
+      >
+      </a-sphere>
+    </a-entity>
+    <!-- Mercury orbit ring -->
+    <a-ring position="0 0 0" rotation="-90 0 0"
+      material="color: #888; opacity: 0.12; transparent: true; shader: flat; side: double"
+      geometry="radiusInner: 6.95; radiusOuter: 7.05; segmentsTheta: 128"></a-ring>
+
+    <!-- ~~~~~ VENUS ~~~~~ -->
+    <a-entity id="venus-orbit" rotation="0 35 0" animation="property: rotation; from: 0 35 0; to: 0 395 0; dur: 12000; easing: linear; loop: true">
+      <a-sphere
+        class="clickable"
+        position="10 0 0"
+        radius="0.7"
+        material="src: #tex-venus; shader: standard; roughness: 0.7"
+        planet-info="name: Venus; desc: Earth\'s twin in size · Crushing atmospheric pressure · Covered in sulfuric acid clouds"
+        animation="property: rotation; to: 0 -360 0; dur: 15000; easing: linear; loop: true"
+      >
+      </a-sphere>
+    </a-entity>
+    <a-ring position="0 0 0" rotation="-90 0 0"
+      material="color: #888; opacity: 0.12; transparent: true; shader: flat; side: double"
+      geometry="radiusInner: 9.95; radiusOuter: 10.05; segmentsTheta: 128"></a-ring>
+
+    <!-- ~~~~~ EARTH + MOON ~~~~~ -->
+    <a-entity id="earth-orbit" rotation="0 90 0" animation="property: rotation; from: 0 90 0; to: 0 450 0; dur: 18000; easing: linear; loop: true">
+      <a-entity position="14 0 0">
+        <!-- Earth -->
+        <a-sphere
+          class="clickable"
+          radius="0.8"
+          material="src: #tex-earth; shader: standard; roughness: 0.5; metalness: 0.1"
+          planet-info="name: Earth; desc: Only world known to harbor life · Protected by a strong magnetic field · Rich in liquid water"
+          animation="property: rotation; to: 0 360 0; dur: 8000; easing: linear; loop: true"
+        >
+        </a-sphere>
+
+        <!-- Moon orbiting Earth -->
+        <a-entity id="moon-orbit" animation="property: rotation; to: 0 360 0; dur: 4000; easing: linear; loop: true">
+          <a-sphere
+            class="clickable"
+            position="1.6 0 0"
+            radius="0.22"
+            material="src: #tex-moon; shader: standard; roughness: 1"
+            planet-info="name: Moon; desc: Our closest celestial neighbor · Causes ocean tides · Explored by Apollo missions"
+          ></a-sphere>
+        </a-entity>
+      </a-entity>
+    </a-entity>
+    <a-ring position="0 0 0" rotation="-90 0 0"
+      material="color: #4488ff; opacity: 0.12; transparent: true; shader: flat; side: double"
+      geometry="radiusInner: 13.95; radiusOuter: 14.05; segmentsTheta: 128"></a-ring>
+
+    <!-- ~~~~~ MARS ~~~~~ -->
+    <a-entity id="mars-orbit" rotation="0 160 0" animation="property: rotation; from: 0 160 0; to: 0 520 0; dur: 24000; easing: linear; loop: true">
+      <a-sphere
+        class="clickable"
+        position="18 0 0"
+        radius="0.55"
+        material="src: #tex-mars; shader: standard; roughness: 0.85"
+        planet-info="name: Mars; desc: The dusty red world · Contains the largest canyon system · Focus of extensive rover exploration"
+        animation="property: rotation; to: 0 360 0; dur: 8200; easing: linear; loop: true"
+      >
+      </a-sphere>
+    </a-entity>
+    <a-ring position="0 0 0" rotation="-90 0 0"
+      material="color: #CC4422; opacity: 0.1; transparent: true; shader: flat; side: double"
+      geometry="radiusInner: 17.95; radiusOuter: 18.05; segmentsTheta: 128"></a-ring>
+
+    <!-- ~~~~~ JUPITER ~~~~~ -->
+    <a-entity id="jupiter-orbit" rotation="0 210 0" animation="property: rotation; from: 0 210 0; to: 0 570 0; dur: 40000; easing: linear; loop: true">
+      <a-sphere
+        class="clickable"
+        position="24 0 0"
+        radius="2.0"
+        material="src: #tex-jupiter; shader: standard; roughness: 0.7"
+        planet-info="name: Jupiter; desc: The gas giant king · Protects inner planets from asteroids · Composed mainly of hydrogen and helium"
+        animation="property: rotation; to: 0 360 0; dur: 4000; easing: linear; loop: true"
+      >
+      </a-sphere>
+    </a-entity>
+    <a-ring position="0 0 0" rotation="-90 0 0"
+      material="color: #CCAA66; opacity: 0.1; transparent: true; shader: flat; side: double"
+      geometry="radiusInner: 23.95; radiusOuter: 24.05; segmentsTheta: 128"></a-ring>
+
+    <!-- ~~~~~ SATURN + RING ~~~~~ -->
+    <a-entity id="saturn-orbit" rotation="0 280 0" animation="property: rotation; from: 0 280 0; to: 0 640 0; dur: 55000; easing: linear; loop: true">
+      <a-entity position="32 0 0">
+        <!-- Saturn body -->
+        <a-sphere
+          class="clickable"
+          radius="1.6"
+          material="src: #tex-saturn; shader: standard; roughness: 0.65"
+          planet-info="name: Saturn; desc: The jewel of the Solar System · Possesses a complex ring system mostly made of ice chunks"
+          animation="property: rotation; to: 0 360 0; dur: 4500; easing: linear; loop: true"
+        >
+        </a-sphere>
+        <!-- Saturn's ring -->
+        <a-ring
+          rotation="-75 0 0"
+          material="src: #tex-saturn-ring; shader: flat; transparent: true; opacity: 0.85; side: double"
+          geometry="radiusInner: 2.0; radiusOuter: 3.4; segmentsTheta: 64"
+        ></a-ring>
+      </a-entity>
+    </a-entity>
+    <a-ring position="0 0 0" rotation="-90 0 0"
+      material="color: #CCBB88; opacity: 0.1; transparent: true; shader: flat; side: double"
+      geometry="radiusInner: 31.95; radiusOuter: 32.05; segmentsTheta: 128"></a-ring>
+
+    <!-- ~~~~~ URANUS ~~~~~ -->
+    <a-entity id="uranus-orbit" rotation="0 330 0" animation="property: rotation; from: 0 330 0; to: 0 690 0; dur: 75000; easing: linear; loop: true">
+      <a-sphere
+        class="clickable"
+        position="39 0 0"
+        radius="1.1"
+        material="src: #tex-uranus; shader: standard; roughness: 0.6"
+        planet-info="name: Uranus; desc: Rolls on its orbit like a barrel · Coldest planetary atmosphere · Discovered by William Herschel"
+        animation="property: rotation; to: 0 360 0; dur: 7000; easing: linear; loop: true"
+      >
+      </a-sphere>
+    </a-entity>
+    <a-ring position="0 0 0" rotation="-90 0 0"
+      material="color: #66BBCC; opacity: 0.1; transparent: true; shader: flat; side: double"
+      geometry="radiusInner: 38.95; radiusOuter: 39.05; segmentsTheta: 128"></a-ring>
+
+    <!-- ~~~~~ NEPTUNE ~~~~~ -->
+    <a-entity id="neptune-orbit" rotation="0 15 0" animation="property: rotation; from: 0 15 0; to: 0 375 0; dur: 95000; easing: linear; loop: true">
+      <a-sphere
+        class="clickable"
+        position="46 0 0"
+        radius="1.05"
+        material="src: #tex-neptune; shader: standard; roughness: 0.55"
+        planet-info="name: Neptune; desc: The outermost gas giant · Supersonic methane winds · Beautiful deep blue coloration"
+        animation="property: rotation; to: 0 360 0; dur: 7500; easing: linear; loop: true"
+      >
+      </a-sphere>
+    </a-entity>
+    <a-ring position="0 0 0" rotation="-90 0 0"
+      material="color: #3355CC; opacity: 0.1; transparent: true; shader: flat; side: double"
+      geometry="radiusInner: 45.95; radiusOuter: 46.05; segmentsTheta: 128"></a-ring>
+
+   
+  </a-scene>
+
+  <!-- ========== INTERACTION SCRIPT ========== -->
+  <script>
+    /* ---------- Planet Info Component ---------- */
+    AFRAME.registerComponent('planet-info', {
+      schema: {
+        name: { type: 'string', default: '' },
+        desc: { type: 'string', default: '' }
+      },
+
+      init: function () {
+        const data = this.data;
+        const el = this.el;
+        const panel = document.getElementById('info-panel');
+        const nameEl = document.getElementById('planet-name');
+        const descEl = document.getElementById('planet-desc');
+
+        el.addEventListener('click', function () {
+          nameEl.textContent = data.name;
+          descEl.textContent = data.desc;
+          panel.classList.remove('hidden');
+
+          // Auto-hide after 5 seconds
+          clearTimeout(window._planetInfoTimeout);
+          window._planetInfoTimeout = setTimeout(function () {
+            panel.classList.add('hidden');
+          }, 5000);
+        });
+
+        // Hover glow
+        el.addEventListener('mouseenter', function () {
+          el.setAttribute('material', 'emissiveIntensity', 0.35);
+          document.body.style.cursor = 'pointer';
+        });
+
+        el.addEventListener('mouseleave', function () {
+          // Restore – sun keeps its own emissive
+          const isSun = data.name === 'Sun';
+          el.setAttribute('material', 'emissiveIntensity', isSun ? 0.9 : 0);
+          document.body.style.cursor = 'default';
+        });
+      }
+    });
+
+    /* ---------- Billboard text (look-at camera) ---------- */
+    AFRAME.registerComponent('look-at', {
+      schema: { type: 'selector' },
+      tick: function () {
+        if (this.data) {
+          const cam = this.data.object3D.getWorldPosition(new THREE.Vector3());
+          this.el.object3D.lookAt(cam);
+        }
+      }
+    });
+  </script>
+</body>
+</html>
